@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / temporary files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+pyenv/
+venv/
+env/
+ENV/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.swp
+
+
+# Configuration files
+*.ini
+
+# Local development environment
+.env
+
+# Compiled Python files
+*.pyc
+
+# IDE and text editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment-specific settings
+*.env
+
+# Mac OSX Finder files
+.DS_Store
