@@ -1,5 +1,16 @@
-Flask==3.0.3
-Flask-Cors==4.0.0
-Flask-RESTful==0.3.10
-python-decouple==3.8
-python-dotenv==1.0.1
+# Usage: pip install -r requirements.txt
+Flask
+Flask-RESTful
+python-decouple
+flask-cors
+python-dotenv
+# Base ----------------------------------------
+matplotlib
+numpy
+torch
+torchvision
+onnxruntime
+# Plotting ------------------------------------
+pandas
+seaborn
+opencv-python

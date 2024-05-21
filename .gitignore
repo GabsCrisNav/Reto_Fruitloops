@@ -36,3 +36,9 @@ logs/
 
 # Mac OSX Finder files
 .DS_Store
+
+# Model
+*.onnx
+
+# Classes
+classes.json
