@@ -5,12 +5,7 @@ python-decouple
 flask-cors
 python-dotenv
 # Base ----------------------------------------
-matplotlib
 numpy
-torch
-torchvision
 onnxruntime
-# Plotting ------------------------------------
-pandas
-seaborn
+matplotlib
 opencv-python

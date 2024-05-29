@@ -39,6 +39,7 @@ logs/
 
 # Model
 *.onnx
+*.pth
 
 # Classes
 classes.json

@@ -6,6 +6,7 @@ from flask_cors import cross_origin
 from PIL import Image
 from flask import Blueprint, request, jsonify
 from utils_model.predict_class import get_class
+import json
 
 predict = Blueprint('predict', __name__)
 
@@ -36,12 +37,12 @@ def prediction_from_model():
         file.save(file_path)
         
         # Process the uploaded image
-        class_image, score = get_class(file_path, 0.1)
+        results = get_class(file_path, 0.1)
 
         # Delete the temporary file
         os.remove(file_path)
 
-        return jsonify({'message': 'Image test successful', 'image class': class_image, 'score': score}), 200
+        return jsonify(results), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -51,12 +52,11 @@ def prediction_from_model():
 def test_model():
     try:
         # Path to a test image file
-        image_path = "src/assets/test6.jpeg"
+        image_path = "src/assets/test_m.jpeg"
         
-        class_image, score = get_class(image_path, 0.1)
-
+        results = get_class(image_path, 0.6)
         
-        return jsonify({'message': 'Image test successful', 'image class': class_image, 'score':score}), 200
+        return jsonify(results), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

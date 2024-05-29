@@ -4,6 +4,10 @@ import cv2
 import random
 import numpy as np
 from .upload_model import session
+import matplotlib.pyplot as plt
+
+from decouple import config
+
 # Load classes from the JSON file
 with open('./src/assets/classes.json', 'r') as file:
     classes_json = json.load(file)
@@ -11,79 +15,55 @@ with open('./src/assets/classes.json', 'r') as file:
 CLASSES = classes_json['classes']
 colors = {name:[random.randint(0, 255) for _ in range(3)] for i,name in enumerate(CLASSES)}
 
-def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32):
-    # Resize and pad image while meeting stride-multiple constraints
-    shape = im.shape[:2]  # current shape [height, width]
-    if isinstance(new_shape, int):
-        new_shape = (new_shape, new_shape)
+# Load and preprocess the image
+def load_and_preprocess_image(image_path, input_shape):
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = cv2.resize(image, (input_shape[3], input_shape[2]))
+    image = np.transpose(image, (2, 0, 1))  # Change data layout from HWC to CHW
+    image = np.expand_dims(image, axis=0)  # Add batch dimension
+    image = image.astype(np.uint8)
+    return image
 
-    # Scale ratio (new / old)
-    r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-    if not scaleup:  # only scale down, do not scale up (for better val mAP)
-        r = min(r, 1.0)
+# Visualize the predictions
+def visualize_predictions(image, num_detections, pred_boxes, pred_scores, pred_classes, class_names, confidence_score = 0.5):
+    #plt.figure(figsize=(10, 10))
+    #plt.imshow(image)
+    results = []
+    num_detections = int(num_detections[0])  # Convert to integer
+    for i in range(num_detections):
+        
+        x_min, y_min, x_max, y_max = pred_boxes[0, i]
+        confidence = pred_scores[0, i]
+        class_id = int(pred_classes[0, i])
+        
+        if confidence > confidence_score:  # Only visualize predictions with confidence > 0.5
+            color = (0, 255, 0)
+            cv2.rectangle(image, (int(x_min), int(y_min)), (int(x_max), int(y_max)), color, 2)
+            label = f"{class_names[class_id]}: {confidence:.2f}"
+            results.append([class_names[class_id], int(confidence*100)])
+            cv2.putText(image, label, (int(x_min), int(y_min) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+    
+    if len(results) < 1:
+        results = [['nothing',0]]
+    
+    return results
+    
+    #plt.imshow(image)
+    #plt.axis('off')
+    #plt.show()
 
-    # Compute padding
-    new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
-    dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
+def get_class(im, conf_needed=0.8):
+    
+    inputs = [o.name for o in session.model.get_inputs()]
+    outputs = [o.name for o in session.model.get_outputs()]
 
-    if auto:  # minimum rectangle
-        dw, dh = np.mod(dw, stride), np.mod(dh, stride)  # wh padding
+    input_image = load_and_preprocess_image(im, (1, 3, 640, 640))
 
-    dw /= 2  # divide padding into 2 sides
-    dh /= 2
+    predictions = session.model.run(outputs, {inputs[0]: input_image})
 
-    if shape[::-1] != new_unpad:  # resize
-        im = cv2.resize(im, new_unpad, interpolation=cv2.INTER_LINEAR)
-    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-    im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
-    return im, r, (dw, dh)
+    num_detections, pred_boxes, pred_scores, pred_classes = predictions
+    print(conf_needed)
+    results = visualize_predictions(input_image[0].transpose(1, 2, 0), num_detections, pred_boxes, pred_scores, pred_classes, CLASSES, conf_needed)
 
-def get_class(image, conf_needed=0.8):
-    img = cv2.imread(image)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    image = img.copy()
-    image, ratio, dwdh = letterbox(image, auto=False)
-    image = image.transpose((2, 0, 1))
-    image = np.expand_dims(image, 0)
-    image = np.ascontiguousarray(image)
-
-    im = image.astype(np.float32)
-    im /= 255
-    im.shape
-
-    outname = [i.name for i in session.model.get_outputs()]
-
-    inname = [i.name for i in session.model.get_inputs()]
-
-    inp = {inname[0]:im}
-
-    try:
-        outputs = session.model.run(outname, inp)[0]
-        ori_images = [img.copy()]
-
-        for i,(batch_id,x0,y0,x1,y1,cls_id,score) in enumerate(outputs):
-            image = ori_images[int(batch_id)]
-            box = np.array([x0,y0,x1,y1])
-            box -= np.array(dwdh*2)
-            box /= ratio
-            box = box.round().astype(np.int32).tolist()
-            cls_id = int(cls_id)
-            score = round(float(score),3)
-            if score >= conf_needed:
-                name = CLASSES[cls_id]
-                color = colors[name]
-                name += ' '+str(score)
-                cv2.rectangle(image,box[:2],box[2:],color,2)
-                cv2.putText(image,name,(box[0], box[1] - 2),cv2.FONT_HERSHEY_SIMPLEX,0.75,[225, 255, 255],thickness=2)  
-            else:
-                score = 0
-                name = ''
-        Image.fromarray(ori_images[0])
-
-        return name, score
-
-    except Exception as e:
-        print(f"Error in get_class: {e}")
-        return None
+    return results
