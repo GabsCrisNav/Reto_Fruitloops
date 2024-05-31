@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 import onnxruntime as ort
+import boto3
 from decouple import config
 import json
 # Load classes from the JSON file
@@ -11,7 +12,10 @@ CLASSES = classes_json['classes']
 
 class Model:
     def __init__(self):
+        s3_client = boto3.client('s3', aws_access_key_id=config('access-key'), aws_secret_access_key=config('secret-access-key'))
+        response = s3_client.get_object(Bucket='model-equipo4', Key='best_o.onnx')
+        object_content = response['Body'].read()
         providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if config('device') == 'cuda' else ['CPUExecutionProvider']
-        self.model = ort.InferenceSession(config('model'), providers=providers)
+        self.model = ort.InferenceSession(object_content, providers=providers)
 
 session = Model()
